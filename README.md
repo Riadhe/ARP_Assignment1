@@ -23,7 +23,7 @@ The simulation runs across two synchronized terminal windows:
 ---
 ## 2. System Architecture
 The system utilizes a centralized architecture where the Blackboard acts as the server. All other processes (Drone Dynamics, UI, Obstacles, Targets) act as clients that communicate exclusively through the Blackboard.
-![Architecture](1.png)
+![Architecture](ArchitectureDiagram.png)
 
 ### Communication Protocol
 * Mechanism: Named Pipes (FIFOs).
