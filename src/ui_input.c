@@ -9,13 +9,13 @@
 #include "params.h" 
 
 const char *keys[3][3] = {{"Z", "E", "R"}, {"S", "D", "F"}, {"X", "C", "V"}};
-//
+// Commanded force values
 float cmd_x = 0.0f;
 float cmd_y = 0.0f;
 float force_step;
 DroneState drone_display;
 
-//  Yser interface drawing functions 
+//  User interface drawing functions 
 void draw_input_win(WINDOW *win) {
     werase(win);
     box(win, 0, 0);

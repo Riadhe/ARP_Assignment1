@@ -1,6 +1,0 @@
-main
-map
-input
-*.o
-.log
-/tmp/fifo_

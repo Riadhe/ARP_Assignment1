@@ -7,7 +7,7 @@
 #include <sys/wait.h>
 #include "common.h"
 
-
+// Define Pipes (File Descriptors)
 int pipe_ui_to_server[2];
 int pipe_dyn_to_server[2];
 int pipe_obs_to_server[2];
@@ -23,7 +23,6 @@ void spawn_terminal(const char* program_path) {
     
     if (pid == 0) {
         // I AM THE CHILD PROCESS
-        // Replace my code with a Terminal Emulator program.
         // We try 3 common Linux terminals: Konsole, Gnome, Xterm.
         execlp("konsole", "konsole", "-e", program_path, NULL);
         execlp("gnome-terminal", "gnome-terminal", "--", program_path, NULL);
@@ -33,8 +32,6 @@ void spawn_terminal(const char* program_path) {
         perror("[Main] Error: Could not launch a new terminal window");
         exit(1);
     }
-    // I AM THE PARENT PROCESS
-    // I return immediately to launch the next thing.
 }
 
 // Forward declarations tell the compiler these functions exist elsewhere

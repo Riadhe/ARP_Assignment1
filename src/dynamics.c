@@ -62,7 +62,8 @@ Vec2 calculate_attraction() {
     }
     return f_att;
 }
-
+// Algorithm 3 : Collision Detection
+// Check if the drone is close enough to a target to collect it.
 void check_collisions() {
     for (int i = 0; i < MAX_TARGETS; i++) {
         // Only check active targets

@@ -23,7 +23,7 @@ static Target targets[MAX_TARGETS];
 static int obs_count = 0;
 static int tar_count = 0;
 
-// --- MESSAGE ROUTER ---
+// Handle incoming messages from different sources
 // This function decides where to send data based on what type it is.
 void handle_message(Message *msg) {
     switch (msg->type) {
@@ -103,7 +103,7 @@ void run_blackboard() {
 
     Message msg;
     while (1) {
-        // POLL: Check every pipe. If read > 0, we handle it.
+        // Check every pipe. If read > 0, we handle it.
         if (read(fd_ui_to_server, &msg, sizeof(Message)) > 0) handle_message(&msg);
         if (read(fd_dyn_to_server, &msg, sizeof(Message)) > 0) handle_message(&msg);
         if (read(fd_obs_to_server, &msg, sizeof(Message)) > 0) handle_message(&msg);

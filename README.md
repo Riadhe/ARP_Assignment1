@@ -1,237 +1,270 @@
-# Drone Simulator
+#  Drone Simulator  
+### *Advanced and Robot Programming – Assignment 1*
 
-# Advance Robots Programming - Assignment 1
+**Student:** Bahri Riadh  
+**ID:** 8335614  
 
-Student: Bahri Riadh
-ID:8335614
+---
 
-## 1 Project Overview
+## 1. Project Overview
 
-This project implements a multi-process drone simulation system using Ncurses for visualization and Named Pipes (FIFOs) for inter-process communication. The architecture follows a Star Topology centered around a Blackboard Server.
+This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
 
-The goal is to navigate a drone (Blue +) to collect sequential targets (Green 1-9) while avoiding repulsive obstacles (Yellow o).
+**Simulation Demo:**
+The simulation runs across two synchronized terminal windows:
 
-## 2. Components & Algorithms
+* UI Map (Left): Visualizes the drone, targets, and obstacles.
+
+* UI Input (Right): Handles keyboard control and displays real-time telemetry.
+
+![Simulation Screenshot](SimulationDemo.png)
+**Goal:** Navigate a drone (Blue +) to collect sequential targets (Green 1–9) while avoiding repulsive obstacles (Yellow o).
+
+---
+## 2. System Architecture
+The system utilizes a centralized architecture where the Blackboard acts as the server. All other processes (Drone Dynamics, UI, Obstacles, Targets) act as clients that communicate exclusively through the Blackboard.
+![Architecture](ArchitectureDiagram.png)
+
+### Communication Protocol
+* Mechanism: Named Pipes (FIFOs).
+
+* Topology: Star (All data flows through the Blackboard).
+
+* Non-Blocking I/O: The server uses O_NONBLOCK to ensure the simulation runs smoothly without hanging on empty pipes.
+## 3. Components and Algorithms
 
 This section details the logic implemented in each source file.
 
+---
+
 ### A. Main Process (`src/main.c`)
 
-**Role:** Process Launcher & Lifecycle Manager.  
-**Primitives:** fork(), exec(), signal(), mkfifo().
+#### **Role**
+Process Launcher and Lifecycle Manager.
 
-**Logic:**
+#### **Primitives**
+`fork()`, `exec()`, `signal()`, `mkfifo()`
 
-- Creates all Named Pipes (FIFOs) required for communication.
-- Installs Signal Handlers (SIGINT) to catch Ctrl+C.
+#### **Logic**
+- Creates all Named Pipes (FIFOs).
+- Installs `SIGINT` handler.
 - Forks internal processes (Blackboard, Dynamics, Generators).
-- Spawns external terminal windows (konsole/xterm) for the UI.
+- Opens external terminals (konsole/xterm).
 
-**Signal Handling Algorithm:**
-On Signal(SIGINT):
-Send SIGTERM to all child_pids
-Unlink (delete) all named pipes
-Exit gracefully
----
+#### **Shutdown Strategy** 
+Upon receiving `SIGINT`, the main process sends SIGTERM to all child PIDs and unlinks (deletes) the pipes to ensure a clean exit.
+
 
 ### B. Blackboard Server (`src/blackboard.c`)
 
-**Role:** Central State Manager & Message Router.  
-**Primitives:** open(O_RDWR), read(O_NONBLOCK), write().
+#### **Role**
+Central State Manager and  Message Router.
 
-**Algorithm:**
+#### **Primitives**
+`open(O_RDWR)`, `read(O_NONBLOCK)`, `write()`
 
-The server uses a Non-Blocking Polling Loop to prevent freezing if one client is slow.
-Loop (1000 Hz):
-For each Input Pipe (UI, Dynamics, Obstacles, Targets):
-If Data Available:
-Read Message
-Update Internal State (Drone Pos, Score, etc.)
-Switch(Message Type):
-Case DRONE_STATE: Broadcast to Map & UI_Input
-Case FORCE: Forward to Dynamics
-Case OBSTACLE: Forward to Map & Dynamics
-Case TARGET: Forward to Map & Dynamics
+#### **Algorithm (Loop 1000 Hz):**
+1. Iterate through all input pipes.
+2. If data is available, parse the message.
+3. Update the internal state struct.
+4. Route Data:
+      * Switch(Message Type):
+      * DRONE_STATE → Broadcast to Map and UI_Input
+      * FORCE → Forward to Dynamics
+      * OBSTACLE → Forward to Map and Dynamics
+      * TARGET → Forward to Map and Dynamics
+
 ---
 
 ### C. Drone Dynamics (`src/dynamics.c`)
 
-**Role:** Physics Engine.  
-**Primitives:** Euler Integration, Vector Math.
+#### **Role**
+Physics Engine and Collision Detection.
 
-#### Algorithm 1: Physics Model
+#### **Primitives**
+Euler Integration, Vector Math.
 
-Calculates movement based on the equation:  
-`F = ma + kv`.
+---
+
+#### **Algorithm 1 — Physics Model**
+
+Uses the equation:
+
+`F = ma + kv`
+
 Loop (500 Hz):
 
-1.Calculate Repulsion Force (F_rep):
-For each Obstacle:
+1. Calculate Repulsion Force:
 If Distance < 10m:
-F_rep += (1/Distance - 1/Rho) * (1/Distance^2)
+F_rep += (1/Distance - 1/Rho) * (1/Distance²)
 
-2.Calculate Total Force:
+2. Calculate Total Force:
 F_total = Command_Force + F_rep
 
-3.Euler Integration:
+3. Euler Integration:
 Acceleration = (F_total - K * Velocity) / Mass
 Velocity += Acceleration * T
 Position += Velocity * T
-#### Algorithm 2: Collision Detection
-If Distance(Drone, Target[i]) < 2.0m:
-If Target[i].ID == Next_Required_ID:
-Mark Target as Collected
-Regenerate Target Position (Respawn)
-Send Update to Server
+
+---
+#### **Algorithm 2 — ATtraction field**
+
+Algorithm Attraction_Field:
+
+1. Initialize attraction force vector F_att = (0, 0)
+
+2. If the next required target exists AND is active:
+      a. Compute displacement:
+            dx = target.x − drone.x
+            dy = target.y − drone.y
+
+      b. Compute distance to the target:
+            dist = sqrt(dx² + dy²)
+
+      c. If the drone is inside the attraction radius (dist < ATTRACTION_RHO):
+            Apply attraction:
+            F_att.x = ATTRACTION_ETA * dx
+            F_att.y = ATTRACTION_ETA * dy
+
+3. Return the attraction force vector F_att
+ 
+---
+#### **Algorithm 3 — Collision Detection**
+* If Distance(Drone, Target[i]) < 2.0m:
+* If Target[i].ID == Next_Required_ID:
+ 1. Mark Target as Collected
+ 2. Respawn Target
+ 3. Send Update to Server
+
 ---
 
 ### D. UI Input (`src/ui_input.c`)
 
-**Role:** Controller & Telemetry Display.  
-**Primitives:** getch(), Ncurses.
+#### **Role**
+Controller and Telemetry Display.
 
-**Algorithm:**
-Loop (50 Hz):
+#### **Primitives**
+`getch()`, Ncurses
 
-1.Read Telemetry from Server (Position, Speed)
-
-2.Read Input (Burst Mode):
-While (Key = getch()) != ERR:
-Process Key (Increment/Decrement Force Variables)
-
-3.If Input Changed:
-Send Force Vector to Server
-
-5.Redraw Telemetry Data
+#### **Algorithm**
+* Loop (50 Hz):
+1. Telemetry: display current position, velocity, and score.
+2. Burst Read: Loop getch() to capture all keystrokes in the buffer.
+3. Command: Calculate the force vector based on keys pressed and write to the server.
 
 ---
 
 ### E. UI Map (`src/ui_map.c`)
 
-**Role:** Visualizer.  
-**Primitives:** Ncurses Colors, Coordinate Scaling.
+#### **Role**
+Visualizer.
 
-**Algorithm:**
-
-Loop (50 Hz):
-
-1.Read World State from Server
-
-2.Check Terminal Size:
-Scale_X = Window_Width / Map_Width
-Scale_Y = Window_Height / Map_Height
-
-3.Draw Entities:
-Screen_X = World_X * Scale_X
-Draw(Drone, Obstacles, Targets)
-
+#### **Primitives**
+Ncurses Colors, Coordinate Scaling.
+* Loop (50 Hz):
+1. Read State from Server
+2. Adjust Scaling if terminal resized
+3. Draw Entities (Drone, Obstacles, Targets)
+   
 ---
 
 ### F. Generators (`src/obstacles.c`, `src/targets.c`)
 
-**Role:** Procedural Generation.
+#### **Role**
+Procedural Generation.
+* Loop:
+1. Sleep(Interval)
+2. Generate Random X, Y
+3. Send MSG_OBSTACLE or MSG_TARGET to Server
 
-**Algorithm:**
-Loop:
-Sleep(Interval)
-Generate Random X, Y within bounds
-Send MSG_OBSTACLE or MSG_TARGET to Server
+---
 
---
-## 3.Installation and  Running : 
+## 4. Installation and Running
+
+---
 
 ### Prerequisites
+- Linux environment  
+- GCC & Make  
+- `libncurses5-dev` or equivalent  
+- `konsole` or `xterm`  
 
-- Linux Environment
-
-- GCC Compiler & Make
-
-- libncurses5-dev or similar
-
-- konsole or xterm (for window spawning)
+---
 
 ### Automated Setup
 
-    The project includes scripts to handle installation and execution automatically.
-
- * A - Install Dependencies:
-        ```bash
-        chmod +x install.sh
-        ./install.sh
-        ```
- * B - Run the Simulation: This script cleans, compiles, and launches the app.
-  ## How to Run
+#### **A — Install Dependencies**
+```bash
+chmod +x install.sh
+./install.sh
+```
+#### **B — Run the Simulation
 ```bash
 chmod +x run.sh
 ./run.sh
 ```
+### Manual Build
 
-  ## Manual Build:
-  If the user need to debug or build manually :
+If debugging manually:
 ```bash
 make clean
 make
 ./main
 ```
-### 4. Operational Instructions :
+## 5. Operational Instructions
+### Controls
 
- ## Controls
+Use the Input Window to pilot the drone.
 
-Use the Input Window to pilot the drone. The controls apply force to the drone's engines, simulating a real thruster system.
+* E / C — Increase Up / Down force
 
- * E / C: Increase Up / Down Force
+* S / F — Increase Left / Right force
 
- * S / F: Increase Left / Right Force
+* D — Brake (reset all forces)
 
- * D: Brake (Instantly resets all command forces to 0, simulating an air-brake to stop the drone)
+* R / Z / V / X — Diagonal thrust
 
- * R, Z, V, X: Apply Diagonal Forces (Combinations of X and Y thrust)
+* ESC — Quit simulation
 
- * ESC: Quit the simulation (closes all windows safely)
+### Gameplay Rules
 
- ## Gameplay Rules
+* Sequence: Fly into Green Targets in order (1 → 9).
 
- * Objective: Fly the drone (Blue +) into the Green Targets.
+* Score increases after each correct collection.
 
- * Sequence: You must collect targets in numerical order: 1 $\to$ 2 $\to$ 3 ... $\to$ 9.
+* Target respawns elsewhere after collection.
 
- * Scoring: Collecting the correct target increments your score (internally tracked) and causes the target to respawn in a new location, creating an endless loop of gameplay.
+* Avoid Yellow Obstacles, which generate repulsive force fields.
+## 6. Configuration
 
- * Hazards: Avoid the Yellow Obstacles (o). They generate a repulsive force field that will push your drone away based on the inverse square law, making navigation challenging near walls or clusters of obstacles.
+You can tune the physics parameters without recompiling the code.:
+Edit config/params.txt:
 
-### 5. Configuration :
+* M : Drone mass (Higher = slower acceleration).
 
-You can fine-tune the physics of the simulation without recompiling the code. Simply edit the config/params.txt file to adjust the drone's handling characteristics:
+* K : Viscous friction (Higher = drone stops faster).
 
- * M: Mass of the drone. (Lower value = faster acceleration, "lighter" feel)
+* F_STEP : Force added per key press.
+## 6. File Structure
 
- * K: Viscous friction coefficient. (Higher value = stops faster/less drift, "tighter" handling)
+```
+project_root/
+├── src/
+│   ├── main.c            # Process launcher and signal handler
+│   ├── blackboard.c      # Central server & message router
+│   ├── dynamics.c        # Physics engine and collision detection
+│   ├── ui_map.c          # Map visualization window
+│   ├── ui_input.c        # Controller and telemetry window
+│   ├── obstacles.c       # Obstacle generator
+│   ├── targets.c         # Target generator
+│   ├── params.c          # Config file parser
+│   └── common.h          # Constants, structs, message protocol
+│
+├── config/
+│   └── params.txt        # Runtime parameters (M, K, F_STEP…)
+│
+├── Makefile              # Build rules
+├── run.sh                # Build + launch automation script
+└── install.sh            # Dependencies installation script
+```
 
- * F_STEP: Force applied per key press. (Higher value = more powerful engines, faster top speed)
-
-### 4 - File Structure : 
-
- * src/main.c: Process launcher and signal handler.
-
- * src/blackboard.c: Server logic and message routing.
-
- * src/dynamics.c: Physics engine and collision detection.
-
- * src/ui_map.c: Map visualization window.
-
- * src/ui_input.c: Input controller window.
-
- * src/obstacles.c: Obstacle generator.
-
- * src/targets.c: Target generator.
-
- * src/params.c: Configuration file parser.
-
- * src/common.h: Shared constants, structs, and protocol definitions.
-
- * config/params.txt: Runtime configuration file.
-
- * Makefile: Compilation rules.
-
- * run.sh / install.sh: Automation scripts.
-  

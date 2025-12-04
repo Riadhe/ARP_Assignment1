@@ -48,7 +48,7 @@
 
 
 // Game Limits
-#define MAX_OBSTACLES 20
+#define MAX_OBSTACLES 30
 #define MAX_TARGETS   9
 
 // 3. MESSAGE TYPES (The Topics)
