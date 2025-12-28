@@ -5,6 +5,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/wait.h>
+#include <signal.h> // <--- 1. ADDED THIS (Required for signal functions)
 #include "common.h"
 
 // Define Pipes (File Descriptors)
@@ -15,6 +16,17 @@ int pipe_tar_to_server[2];
 int pipe_server_to_ui[2];
 int pipe_server_to_dyn[2];
 
+// --- [NEW] Signal Handler ---
+void handle_sigint(int sig) {
+    // Log the event explicitly before dying
+    log_message(SYSTEM_LOG_FILE, "Main", "Received SIGINT. Shutting down system...");
+    
+    // Optional: Kill children explicitly if needed
+    // kill(0, SIGTERM); 
+    
+    printf("\n[Main] Shutdown complete. See system.log for details.\n");
+    exit(0);
+}
 
 // Spawn terminal : This function launches a NEW separate konsole's window 
 // and runs a specific program inside it.
@@ -41,10 +53,24 @@ void run_obstacles();
 void run_targets();   
 
 int main() {
+    // 2. CONNECT SIGNAL HANDLER (New for Assignment 2)
+    signal(SIGINT, handle_sigint); 
+
+    // 3. CLEANUP (New for Assignment 2)
+    // Remove old logs and lists to start fresh
+    remove(PROCESS_LIST_FILE);
+    remove(WATCHDOG_LOG_FILE);
+    remove(SYSTEM_LOG_FILE);
+
     printf("[Main] Starting system...\n");
 
-    // 1. Initialize Pipes (Create the resources)
+    // 4. REGISTRATION New for Assignment 2
+    register_process("Main_Manager");
+    log_message(SYSTEM_LOG_FILE, "Main", "System starting up...");
+
+    // 5. Initialize Pipes (Create the resources)
     if (pipe(pipe_ui_to_server) == -1) perror("pipe");
+    // (Note: In a full implementation, initialize ALL pipes here)
  
     // IMPORTANT: Make pipes Non-Blocking.
     // This prevents the system from freezing if one pipe is empty.
@@ -55,24 +81,30 @@ int main() {
 
     printf("[Main] Pipes created.\n");
 
-    // 2. Launch Background Processes 
-    // fork() creates a copy of the program.
-    if (fork() == 0) { run_blackboard(); exit(0); } // Server
-    if (fork() == 0) { run_dynamics(); exit(0); }   // Physics
-    if (fork() == 0) { run_obstacles(); exit(0); }  // Walls
-    if (fork() == 0) { run_targets(); exit(0); }    // Goals
 
-    // 3. Spawn External Windows (The Display & Input)
-    // These open in new windows on  desktop.
+    // 6. Launch Background Processes 
+    // fork() creates a copy of the program.
+    //  Reset signal handler to Default (SIG_DFL) for children 
+    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_blackboard(); exit(0); } // Server
+    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_dynamics(); exit(0); }   // Physics
+    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_obstacles(); exit(0); }  // Walls
+    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_targets(); exit(0); }    // Goals
+
+    // 7. Spawn External Windows (The Display & Input)
+    // These open in new windows on desktop.
     printf("[Main] Launching Map Window...\n");
     spawn_terminal("./map"); 
     
     printf("[Main] Launching Input Window...\n");
     spawn_terminal("./input");
 
+    // 8. LAUNCH WATCHDOG (New for Assignment 2) 
+    printf("[Main] Launching Watchdog...\n");
+    spawn_terminal("./watchdog");
+
     printf("[Main] System Running. Press Ctrl+C to stop.\n");
 
-    // 4. Keep Parent Alive
+    // 9. Keep Parent Alive
     // If main() exits, the OS might kill all child processes.
     while (1) {
         sleep(10);

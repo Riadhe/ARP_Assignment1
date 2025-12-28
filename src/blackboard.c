@@ -76,6 +76,11 @@ void handle_message(Message *msg) {
 }
 
 void run_blackboard() {
+    // Additionnal Line of Assignment 2: Register process and log startup
+    register_process("Blackboard"); 
+    log_message(SYSTEM_LOG_FILE, "Blackboard", "Server started."); // 
+
+    
     printf("[Blackboard] Active.\n");
     fflush(stdout); // Force print immediately
 

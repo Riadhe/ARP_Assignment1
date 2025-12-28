@@ -17,12 +17,15 @@ The simulation runs across two synchronized terminal windows:
 
 * UI Input (Right): Handles keyboard control and displays real-time telemetry.
 
+* Watchdog (sperate image): Monitors the health status of all active processes.
+
 ![Simulation Screenshot](SimulationDemo.png)
-**Goal:** Navigate a drone (Blue +) to collect sequential targets (Green 1–9) while avoiding repulsive obstacles (Yellow o).
+![Simulation Screenshot](WatchdogWindow.png)
+**Goal:** Navigate a drone (Blue +) to collect sequential targets (Green 1–9) while avoiding repulsive obstacles (Yellow o), all while the Watchdog ensures system stability.
 
 ---
 ## 2. System Architecture
-The system utilizes a centralized architecture where the Blackboard acts as the server. All other processes (Drone Dynamics, UI, Obstacles, Targets) act as clients that communicate exclusively through the Blackboard.
+The system utilizes a centralized architecture where the Blackboard acts as the server. All other processes (Drone Dynamics, UI, Obstacles, Targets) act as clients that communicate exclusively through the Blackboard.(Note: The Watchdog operates as a separate supervisor parallel to this topology).
 ![Architecture](ArchitectureDiagram.png)
 
 ### Communication Protocol
@@ -31,6 +34,33 @@ The system utilizes a centralized architecture where the Blackboard acts as the 
 * Topology: Star (All data flows through the Blackboard).
 
 * Non-Blocking I/O: The server uses O_NONBLOCK to ensure the simulation runs smoothly without hanging on empty pipes.
+## 3.. Assignment 2 Features (New)
+
+The second phase of the project introduces system monitoring and safety mechanisms.
+
+### A. Watchdog Process :
+
+A cyclic process that monitors the health of all other active components.
+
+* Polling: Wakes up every $T$ seconds (configurable).
+
+* Mechanism: Sends Signal 0 to check if a PID is alive.
+
+* Alerts: If a process crashes, it logs an alert to system.log and visually flags it as "NOT RESPONDING" in the Watchdog Window.
+
+### B. Safe File Logging : 
+
+To prevent race conditions when multiple processes write to logs simultaneously, the system implements File Locking (fcntl).
+
+* Process List: All processes register their Name and PID in process_list.txt upon startup.
+
+* Logs: Two distinct log files are maintained:
+
+      - watchdog.log: Routine health checks.
+
+      - system.log: Critical errors and state changes.
+
+
 ## 3. Components and Algorithms
 
 This section details the logic implemented in each source file.
@@ -50,6 +80,7 @@ Process Launcher and Lifecycle Manager.
 - Installs `SIGINT` handler.
 - Forks internal processes (Blackboard, Dynamics, Generators).
 - Opens external terminals (konsole/xterm).
+- New: Registers its own PID for monitoring.
 
 #### **Shutdown Strategy** 
 Upon receiving `SIGINT`, the main process sends SIGTERM to all child PIDs and unlinks (deletes) the pipes to ensure a clean exit.
@@ -178,7 +209,35 @@ Procedural Generation.
 3. Send MSG_OBSTACLE or MSG_TARGET to Server
 
 ---
+### G. Watchdog Process(`src/watchdog.c`)
+#### **Role**
+System Health Monitor.
+#### **Algorithm :**
+* (Loop $T$ Seconds):
+      1. Open process_list.txt (with Read Lock).
 
+      2. Read every Name and PID.
+
+      3. Send kill(pid, 0) to check status.
+
+      4. Update Ncurses UI (Green=Alive, Red=Dead).
+
+      5. Log result to watchdog.log.
+
+      6. Release Lock and Sleep.
+---
+---
+### H. Utilities (`src/utilities.c`):
+#### **Role**
+Shared Helper Functions for Safety.
+#### **Algorithm :**
+* 
+      1. file_lock(): Wrapper for fcntl to handle F_SETLKW (Blocking Wait).
+
+      2. register_process(): Safe write of PID to the process list.
+
+      3. log_message(): Safe write (Open -> Lock -> Write -> Unlock -> Close) to log files.
+---
 ## 4. Installation and Running
 
 ---
@@ -245,12 +304,16 @@ Edit config/params.txt:
 * K : Viscous friction (Higher = drone stops faster).
 
 * F_STEP : Force added per key press.
+
+* T_WATCHDOG: (Optional) Monitoring interval.
 ## 6. File Structure
 
 ```
 project_root/
 ├── src/
-│   ├── main.c            # Process launcher and signal handler
+│   ├── main.c            # Launcher (Updated with Watchdog)
+│   ├── watchdog.c        # [NEW] Health monitoring process
+│   ├── utilities.c       # [NEW] File locking & logging helpers
 │   ├── blackboard.c      # Central server & message router
 │   ├── dynamics.c        # Physics engine and collision detection
 │   ├── ui_map.c          # Map visualization window

@@ -75,7 +75,10 @@ void check_collisions() {
             if (dist < 2.0) {
                 // Check Sequence
                 if (targets[i].id == next_target_needed) {
-                    
+
+                    // [NEW LOGGING] Debug the sequence logic 
+                    log_message(SYSTEM_LOG_FILE, "Dynamics", "Target %d collected. Sequence updated.", targets[i].id);
+                    //
                     // 1. DISAPPEAR (Set inactive)
                     targets[i].active = 0;
                     
@@ -92,7 +95,10 @@ void check_collisions() {
                     // 3. LEVEL CLEAR CHECK
                     // If we collected the last target (target 8, which is number 9)
                     if (next_target_needed >= MAX_TARGETS) {
-                        
+
+                        // [NEW LOGGING] Debug the level reset logic 
+                        log_message(SYSTEM_LOG_FILE, "Dynamics", "LEVEL CLEAR! Respawning all targets.");
+                        // 
                         // Reset Sequence
                         next_target_needed = 0;
                         
@@ -146,6 +152,8 @@ void send_state() {
 }
 
 void run_dynamics() {
+    register_process("Dynamics");
+    log_message(SYSTEM_LOG_FILE, "Dynamics", "Dynamics process started.");
     srand(time(NULL) + getpid());
     // Load parameters from config file
     M = load_param("config/params.txt", "M");

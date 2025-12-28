@@ -92,7 +92,10 @@ void draw_game_entities(WINDOW *win) {
     wrefresh(win);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    register_process("UI_Map"); // New for Assignment 2
+    log_message(SYSTEM_LOG_FILE, "UI_Map", "Map UI process started."); 
+
     setlocale(LC_ALL, "");
     initscr(); cbreak(); noecho(); keypad(stdscr, TRUE); curs_set(0); 
     // nodelay() stops the map from sleeping while waiting for keys

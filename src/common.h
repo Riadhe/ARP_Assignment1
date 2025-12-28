@@ -1,10 +1,20 @@
 #ifndef COMMON_H
 #define COMMON_H
 
-#include <sys/types.h> 
-
-
-// 1. PIPES 
+// 1. Standard Libraries
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/types.h>
+// NEW: Required for Locking and Logging
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <time.h>
+#include <errno.h>
+#include <signal.h>
+#include <stdarg.h>
+// 2. PIPES 
 #define PIPE_DIR "/tmp/"
 
 // Input Window -> Server
@@ -45,11 +55,19 @@
 #define UI_REFRESH_RATE 20000  
 // 2000us = 2ms = 500 Physics Steps Per Second (High precision math)
 #define DYNAMICS_RATE   2000   
+// NEW: Update rate for dynamic obstacles/targets (e.g., 50ms = 20Hz)
+#define GENERATOR_RATE  50000 
 
 
 // Game Limits
 #define MAX_OBSTACLES 30
 #define MAX_TARGETS   9
+
+
+// 2. Assignment 2 Constants (NEW)
+#define PROCESS_LIST_FILE "process_list.txt"
+#define SYSTEM_LOG_FILE   "system.log"
+#define WATCHDOG_LOG_FILE "watchdog.log"
 
 // 3. MESSAGE TYPES (The Topics)
 typedef enum {
@@ -104,4 +122,22 @@ typedef struct {
     char info[64];      // For debug text messages
 } Message;
 
+
+// 6. Function Prototypes (NEW) 
+// These allow all your processes to use the tools in utilities.c
+
+/**
+ * Handles file locking (The "Key" logic)
+ */
+int file_lock(int fd, int cmd, int type);
+
+/**
+ * Writes to a log file safely (Open -> Lock -> Write -> Unlock -> Close)
+ */
+void log_message(const char *filename, const char *process_name, const char *fmt, ...);
+
+/**
+ * Saves the process PID to process_list.txt so the Watchdog can find it
+ */
+void register_process(const char *process_name);
 #endif

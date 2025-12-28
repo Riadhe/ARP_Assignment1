@@ -98,7 +98,11 @@ void update_layout(WINDOW *left, WINDOW *right, float ratio, char *log_msg) {
     doupdate(); 
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    // Register process and log startup(New for Assignment 2)
+    register_process("UI_Input"); 
+    log_message(SYSTEM_LOG_FILE, "UI_Map", "Map UI process started."); 
+    
     setlocale(LC_ALL, ""); 
     initscr(); cbreak(); noecho(); keypad(stdscr, TRUE); curs_set(0);
     
@@ -187,8 +191,8 @@ int main(void) {
         else usleep(1000); 
     }
 
-    close(fd_out); close(fd_in);
-    delwin(left_win); delwin(right_win);
+    close(fd_out); close(fd_in); // Close pipes
+    delwin(left_win); delwin(right_win); // Delete windows
     endwin();
     return 0;
 }
