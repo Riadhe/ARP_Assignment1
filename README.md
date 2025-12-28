@@ -11,13 +11,13 @@
 This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
 
 **Simulation Demo:**
-The simulation runs across two synchronized terminal windows:
+The simulation runs across three synchronized terminal windows:
 
-* UI Map (Left): Visualizes the drone, targets, and obstacles.
+* UI Map : Visualizes the drone, targets, and obstacles.
 
-* UI Input (Right): Handles keyboard control and displays real-time telemetry.
+* UI Input : Handles keyboard control and displays real-time telemetry.
 
-* Watchdog (sperate image): Monitors the health status of all active processes.
+* Watchdog : Monitors the health status of all active processes.
 
 ![Simulation Screenshot](SimulationDemo.png)
 ![Simulation Screenshot](WatchdogWindow.png)
@@ -56,9 +56,9 @@ To prevent race conditions when multiple processes write to logs simultaneously,
 
 * Logs: Two distinct log files are maintained:
 
-      - watchdog.log: Routine health checks.
+      - watchdog.log: For routine health checks.
 
-      - system.log: Critical errors and state changes.
+      - system.log: for the critical errors and state changes.
 
 
 ## 3. Components and Algorithms
@@ -257,7 +257,7 @@ Shared Helper Functions for Safety.
 chmod +x install.sh
 ./install.sh
 ```
-#### **B — Run the Simulation
+#### **B — Run the Simulation**
 ```bash
 chmod +x run.sh
 ./run.sh
