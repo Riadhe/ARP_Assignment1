@@ -67,11 +67,12 @@ To prevent race conditions when multiple processes write to logs simultaneously,
 
 * Logs: Two distinct log files are maintained:
 
-      - watchdog.log: For routine health checks.
+  - watchdog.log: For routine health checks.
 
-      - system.log: for the critical errors and state changes.
-
+  - system.log: for the critical errors and state changes.
+---
 ## 4. Assignment 3 Features (Networking): 
+---
 ### A. Operation Modes
 The game behavior changes significantly depending on the mode selected at startup. This design ensures the same codebase can handle single-player logic and distributed networking logic.
 
@@ -80,27 +81,29 @@ The game behavior changes significantly depending on the mode selected at startu
   * **Server (The Host)**: Acts as the host for a multiplayer session by opening Port 8080. It disables local obstacle generators and the Watchdog to prevent synchronization issues, relying instead on the connected client to serve as the dynamic obstacle.
 
   * **Client (The Guest)**: Connects to the Server's IP address to join an existing session. It automatically synchronizes its map configuration with the host and disables local generators and monitoring, focusing entirely on real-time interaction with the remote player.
-
+---
 ### B.Network Protocol :
 This defines the "Language" the two computers speak. It is strictly synchronous (Step-by-Step) to prevent data corruption.
 
 * Handshake (The Setup):
 
-ok $\to$ ook: Confirms connection stability. "Are you there?" -> "Yes, I am here."
+  - ok $\to$ ook: Confirms connection stability. "Are you there?" -> "Yes, I am here."
 
-size $\to$ sok: The Server dictates the Map Width/Height. The Client receives these dimensions, resizes its window if necessary, and confirms receipt.
+  - size $\to$ sok: The Server dictates the Map Width/Height. The Client receives these dimensions, resizes its window if necessary, and confirms receipt.
 
 * Exchange (The Loop):
 
-drone → dok: "Here are my coordinates." -> "Data received (OK)."
+  - drone → dok: "Here are my coordinates." -> "Data received (OK)."
 
-obst → pok: "Where are you?" -> "Here are my coordinates (as an obstacle)." -> "Data received (OK)."
-
+  - obst → pok: "Where are you?" -> "Here are my coordinates (as an obstacle)." -> "Data received (OK)."
+---
 * Note: To the local player, the remote player is treated mathematically as an Obstacle (O), triggering the repulsion force logic.
+* ---
 ### C.Technical Implementation :
 * Packet Handling: Implemented a "Smart Reader" (byte-by-byte) to resolve TCP packet merging issues.
 
 * Rate Limiting: Decouples network I/O (10Hz) from physics calculation (100Hz) to prevent input lag.
+---
 ## 5. Components and Algorithms : 
 
 This section details the logic implemented in each source file.
@@ -128,7 +131,7 @@ Process Launcher and Lifecycle Manager.
 #### **Shutdown Strategy** 
 Upon receiving `SIGINT`, the main process sends SIGTERM to all child PIDs and unlinks (deletes) the pipes to ensure a clean exit.
 
-
+---
 ### B. Blackboard Server (`src/blackboard.c`)
 
 #### **Role**
@@ -301,7 +304,7 @@ Network Interface Layer (Assignment 3).
 
       6. Release Lock and Sleep.
 ---
-## 4. Installation and Running
+## 5. Installation and Running
 Update the internal state struct.
 4. Route Data:
       * Switch(Message Type):
@@ -339,7 +342,8 @@ make clean
 make
 ./main
 ```
-## 5. Operational Instructions
+## 6. Operational Instructions
+---
 ### Controls
 
 Use the Input Window to pilot the drone.
@@ -353,7 +357,7 @@ Use the Input Window to pilot the drone.
 * R / Z / V / X — Diagonal thrust
 
 * ESC — Quit simulation
-
+---
 ### Select Operation Mode:
 
 * Standalone: Run Assignment 2 (Full simulation with Watchdog).
@@ -361,7 +365,8 @@ Use the Input Window to pilot the drone.
 * Server: Run Assignment 3 Host (Wait for connection).
 
 * Client: Run Assignment 3 Guest (Connect to IP).
-## 6. Configuration
+---
+## 7. Configuration
 
 You can tune the physics parameters without recompiling the code.:
 Edit config/params.txt:
@@ -373,6 +378,7 @@ Edit config/params.txt:
 * F_STEP : Force added per key press.
 
 * T_WATCHDOG: (Optional) Monitoring interval.
+* ---
 ## 6. File Structure
 
 ```
