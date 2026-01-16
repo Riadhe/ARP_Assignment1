@@ -1,11 +1,10 @@
-#  Drone Simulator  
+#  🚁 Drone Simulator  
 ### *Advanced Robot Programming – Assignment 3*
 
 **Student:** Bahri Riadh  
 **ID:** 8335614  
 **Tested with :** Hani Bouhraoui 
 ---
-
 ## 1. Project Overview
 
 This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
