@@ -5,10 +5,11 @@
 **ID:** 8335614  
 **Tested with :** Hani Bouhraoui 
 ---
-## 1. Project Overview
+## 1. Project Overview:
 
 This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
 In the final phase (Assignment 3), the system extends to support **Multiplayer Networking** via TCP Sockets.This allows two instances of the simulator (Server and Client) to connect over a network, synchronizing drone positions in real-time.
+
 ---
 ## 2.Evolution of the Project:
 
@@ -330,7 +331,7 @@ make clean
 make
 ./main
 ```
-## 6. Operational Instructions
+## 6. Operational Instructions : 
 ---
 ### Controls
 
@@ -354,7 +355,7 @@ Use the Input Window to pilot the drone.
 
 * Client: Run Assignment 3 Guest (Connect to IP).
 ---
-## 7. Configuration
+## 7. Configuration :
 
 You can tune the physics parameters without recompiling the code.:
 Edit config/params.txt:
@@ -367,7 +368,7 @@ Edit config/params.txt:
 
 * T_WATCHDOG: (Optional) Monitoring interval.
 * ---
-## 6. File Structure
+## 📂 6. File Structure :
 
 ```
 project_root/
