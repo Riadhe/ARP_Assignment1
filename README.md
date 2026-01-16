@@ -9,6 +9,7 @@
 ## 1. Project Overview
 
 This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
+In the final phase (Assignment 3), the system extends to support **Multiplayer Networking** via TCP Sockets.This allows two instances of the simulator (Server and Client) to connect over a network, synchronizing drone positions in real-time.
 
 **Simulation Demo:**
 The simulation runs across three synchronized terminal windows:
@@ -21,7 +22,9 @@ The simulation runs across three synchronized terminal windows:
 
 ![Simulation Screenshot](SimulationDemo.png)
 ![Simulation Screenshot](WatchdogWindow.png)
-**Goal:** Navigate a drone (Blue +) to collect sequential targets (Green 1–9) while avoiding repulsive obstacles (Yellow o), all while the Watchdog ensures system stability.
+**Goal:** 
+* Standalone Mode:  Navigate a drone (Blue +) to collect sequential targets (Green 1–9) while avoiding repulsive obstacles (Yellow o), all while the Watchdog ensures system stability.
+* Multiplayer Mode:  Navigate freely while avoiding the other player (rendered as an obstacle).
 
 ---
 ## 2. System Architecture
@@ -29,12 +32,12 @@ The system utilizes a centralized architecture where the Blackboard acts as the 
 ![Architecture](ArchitectureDiagram.png)
 
 ### Communication Protocol
-* Mechanism: Named Pipes (FIFOs).
+* Local IPC : Named Pipes (FIFOs) for internal processes.
 
-* Topology: Star (All data flows through the Blackboard).
+* Remote IPC: TCP Sockets for Server-Client communication (Assignment 3).
 
 * Non-Blocking I/O: The server uses O_NONBLOCK to ensure the simulation runs smoothly without hanging on empty pipes.
-## 3.. Assignment 2 Features (New)
+## 3. Assignment 2 Features (New)
 
 The second phase of the project introduces system monitoring and safety mechanisms.
 
@@ -60,8 +63,37 @@ To prevent race conditions when multiple processes write to logs simultaneously,
 
       - system.log: for the critical errors and state changes.
 
+## 4. Assignment 3 Features (Networking): 
+### A. Operation Modes
+The game behavior changes significantly depending on the mode selected at startup. This design ensures the same codebase can handle single-player logic and distributed networking logic.
 
-## 3. Components and Algorithms
+* Standalone (Legacy Mode):
+
+This mode runs the full simulation locally for single-player practice. Random targets and obstacles are generated automatically to provide a challenge, and the Watchdog process remains active to monitor system reliability.
+
+* Server (The Host):
+Acts as the host for a multiplayer session by opening Port 8080. It disables local obstacle generators and the Watchdog to prevent synchronization issues, relying instead on the connected client to serve as the dynamic obstacle.
+
+* Client (The Guest):
+Connects to the Server's IP address to join an existing session. It automatically synchronizes its map configuration with the host and disables local generators and monitoring, focusing entirely on real-time interaction with the remote player.
+### B.Network Protocol :
+This defines the "Language" the two computers speak. It is strictly synchronous (Step-by-Step) to prevent data corruption.
+
+* Handshake (The Setup):
+
+ok → ook: Confirms connection stability. "Are you there?" -> "Yes, I am here."
+
+size → sok: The Server dictates the Map Width/Height. The Client receives these dimensions, resizes its window if necessary, and confirms receipt.
+
+* Exchange (The Loop):
+
+drone → dok: "Here are my coordinates." -> "Data received (OK)."
+
+obst → pok: "Where are you?" -> "Here are my coordinates (as an obstacle)." -> "Data received (OK)."
+
+* Note: To the local player, the remote player is treated mathematically as an Obstacle (O), triggering the repulsion force logic.
+
+## 5. Components and Algorithms
 
 This section details the logic implemented in each source file.
 
@@ -76,10 +108,13 @@ Process Launcher and Lifecycle Manager.
 `fork()`, `exec()`, `signal()`, `mkfifo()`
 
 #### **Logic**
-- Creates all Named Pipes (FIFOs).
-- Installs `SIGINT` handler.
-- Forks internal processes (Blackboard, Dynamics, Generators).
-- Opens external terminals (konsole/xterm).
+- Mode Selection: Prompts user to select Standalone, Server, or Client mode.
+- itialization: Creates all Named Pipes (FIFOs).
+- Process Management: Forks internal processes (Blackboard, Dynamics).
+- Conditional Launch: 
+      * If Standalone: Forks Generators (Obstacles, Targets) and Watchdog.
+
+      * If Multiplayer: Skips Generators and Watchdog.
 - New: Registers its own PID for monitoring.
 
 #### **Shutdown Strategy** 
@@ -95,15 +130,11 @@ Central State Manager and  Message Router.
 `open(O_RDWR)`, `read(O_NONBLOCK)`, `write()`
 
 #### **Algorithm (Loop 1000 Hz):**
-1. Iterate through all input pipes.
-2. If data is available, parse the message.
-3. Update the internal state struct.
-4. Route Data:
-      * Switch(Message Type):
-      * DRONE_STATE → Broadcast to Map and UI_Input
-      * FORCE → Forward to Dynamics
-      * OBSTACLE → Forward to Map and Dynamics
-      * TARGET → Forward to Map and Dynamics
+1. Read Inputs: Drain pipes from UI Input and Dynamics to get local commands and position.
+2. Handle Environment:
+      * If Standalone: Read from local Obstacle and Target pipes.
+      * If Multiplayer: Call `socket_manager` to exchange position data with the remote player (Network I/O rate-limited to 10Hz).
+3. Broadcast: Send current state (Drone, Obstacles, Targets) to UI Map and Dynamics.
 
 ---
 
@@ -230,7 +261,13 @@ System Health Monitor.
 ### H. Utilities (`src/utilities.c`):
 #### **Role**
 Shared Helper Functions for Safety.
-#### **Algorithm :**
+#### **Algorithm :**Update the internal state struct.
+4. Route Data:
+      * Switch(Message Type):
+      * DRONE_STATE → Broadcast to Map and UI_Input
+      * FORCE → Forward to Dynamics
+      * OBSTACLE → Forward to Map and Dynamics
+      * TARGET → Forward to Map and Dynamics
 * 
       1. file_lock(): Wrapper for fcntl to handle F_SETLKW (Blocking Wait).
 
@@ -238,8 +275,32 @@ Shared Helper Functions for Safety.
 
       3. log_message(): Safe write (Open -> Lock -> Write -> Unlock -> Close) to log files.
 ---
-## 4. Installation and Running
+### G. Socket Manager(`src/socket_manager.c`)
+#### **Role**
+Network Interface Layer (Assignment 3).
+#### **Primitives**
+socket(), bind(), accept(), connect(), send(), recv()
+#### **Algorithm :**
+* 
+      1. Connection: Handles TCP connection setup for both Server (bind/listen) and Client (connect).
 
+      2. Handshake: Executes the strict ok/size verification sequence.
+      3. Parsing: Uses robust sscanf logic to handle variable delimiters (commas/spaces) for interoperability.
+
+      4. Packet Handling: Implements a smart reader that reads 1 byte at a time to prevent TCP stream fragmentation errors (packet merging).
+
+      5. Log result to watchdog.log.
+
+      6. Release Lock and Sleep.
+---
+## 4. Installation and Running
+Update the internal state struct.
+4. Route Data:
+      * Switch(Message Type):
+      * DRONE_STATE → Broadcast to Map and UI_Input
+      * FORCE → Forward to Dynamics
+      * OBSTACLE → Forward to Map and Dynamics
+      * TARGET → Forward to Map and Dynamics
 ---
 
 ### Prerequisites
@@ -285,15 +346,13 @@ Use the Input Window to pilot the drone.
 
 * ESC — Quit simulation
 
-### Gameplay Rules
+### Select Operation Mode:
 
-* Sequence: Fly into Green Targets in order (1 → 9).
+* Standalone: Run Assignment 2 (Full simulation with Watchdog).
 
-* Score increases after each correct collection.
+* Server: Run Assignment 3 Host (Wait for connection).
 
-* Target respawns elsewhere after collection.
-
-* Avoid Yellow Obstacles, which generate repulsive force fields.
+* Client: Run Assignment 3 Guest (Connect to IP).
 ## 6. Configuration
 
 You can tune the physics parameters without recompiling the code.:
@@ -322,6 +381,8 @@ project_root/
 │   ├── targets.c         # Target generator
 │   ├── params.c          # Config file parser
 │   └── common.h          # Constants, structs, message protocol
+│   ├── socket_manager.c  # Network Protocol Implementation
+│   ├── socket_manager.h  # Network Headers
 │
 ├── config/
 │   └── params.txt        # Runtime parameters (M, K, F_STEP…)

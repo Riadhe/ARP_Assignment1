@@ -5,107 +5,121 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <sys/wait.h>
-#include <signal.h> // <--- 1. ADDED THIS (Required for signal functions)
+#include <signal.h> 
 #include "common.h"
 
-// Define Pipes (File Descriptors)
-int pipe_ui_to_server[2];
-int pipe_dyn_to_server[2];
-int pipe_obs_to_server[2];
-int pipe_tar_to_server[2];
-int pipe_server_to_ui[2];
-int pipe_server_to_dyn[2];
-
-// --- [NEW] Signal Handler ---
+// Signal Handler
 void handle_sigint(int sig) {
-    // Log the event explicitly before dying
     log_message(SYSTEM_LOG_FILE, "Main", "Received SIGINT. Shutting down system...");
-    
-    // Optional: Kill children explicitly if needed
-    // kill(0, SIGTERM); 
-    
     printf("\n[Main] Shutdown complete. See system.log for details.\n");
+    // Clean up pipes on exit
+    unlink(PIPE_UI_TO_SERVER);
+    unlink(PIPE_SERVER_TO_UI_INPUT);
+    unlink(PIPE_SERVER_TO_MAP);
+    unlink(PIPE_SERVER_TO_DYN);
+    unlink(PIPE_DYN_TO_SERVER);
+    unlink(PIPE_OBS_TO_SERVER);
+    unlink(PIPE_TAR_TO_SERVER);
     exit(0);
 }
 
-// Spawn terminal : This function launches a NEW separate konsole's window 
-// and runs a specific program inside it.
+// Spawn terminal helper
 void spawn_terminal(const char* program_path) {
-    pid_t pid = fork(); // Clone myself
-    
+    pid_t pid = fork();
     if (pid == 0) {
-        // I AM THE CHILD PROCESS
-        // We try 3 common Linux terminals: Konsole, Gnome, Xterm.
         execlp("konsole", "konsole", "-e", program_path, NULL);
         execlp("gnome-terminal", "gnome-terminal", "--", program_path, NULL);
         execlp("xterm", "xterm", "-e", program_path, NULL);
-        
-        // If we get here, no terminal was found!
         perror("[Main] Error: Could not launch a new terminal window");
         exit(1);
     }
 }
 
-// Forward declarations tell the compiler these functions exist elsewhere
-void run_blackboard(); 
+// Helper to create all named pipes
+void create_named_pipes() {
+    mode_t mode = 0666;
+    // Unlink old pipes (in case of crash) and Create new ones
+    unlink(PIPE_UI_TO_SERVER);       if (mkfifo(PIPE_UI_TO_SERVER, mode) == -1) perror("mkfifo UI->Server");
+    unlink(PIPE_SERVER_TO_UI_INPUT); if (mkfifo(PIPE_SERVER_TO_UI_INPUT, mode) == -1) perror("mkfifo Server->Input");
+    unlink(PIPE_SERVER_TO_MAP);      if (mkfifo(PIPE_SERVER_TO_MAP, mode) == -1) perror("mkfifo Server->Map");
+    unlink(PIPE_SERVER_TO_DYN);      if (mkfifo(PIPE_SERVER_TO_DYN, mode) == -1) perror("mkfifo Server->Dyn");
+    unlink(PIPE_DYN_TO_SERVER);      if (mkfifo(PIPE_DYN_TO_SERVER, mode) == -1) perror("mkfifo Dyn->Server");
+    unlink(PIPE_OBS_TO_SERVER);      if (mkfifo(PIPE_OBS_TO_SERVER, mode) == -1) perror("mkfifo Obs->Server");
+    unlink(PIPE_TAR_TO_SERVER);      if (mkfifo(PIPE_TAR_TO_SERVER, mode) == -1) perror("mkfifo Tar->Server");
+    printf("[Main] All Named Pipes (FIFOs) created in /tmp/.\n");
+}
+
+void run_blackboard(int mode); 
 void run_dynamics();   
 void run_obstacles(); 
 void run_targets();   
 
 int main() {
-    // 2. CONNECT SIGNAL HANDLER (New for Assignment 2)
-    signal(SIGINT, handle_sigint); 
+    signal(SIGINT, handle_sigint);
 
-    // 3. CLEANUP (New for Assignment 2)
-    // Remove old logs and lists to start fresh
+    signal(SIGPIPE, SIG_IGN);
+
+    // STEP 1: SELECT MODE 
+    int mode = 0; 
+    printf("\n=== DRONE SIMULATOR - ASSIGNMENT 3 ===\n");
+    printf("Select Operation Mode:\n");
+    printf("1. Standalone (Assignment 2)\n");
+    printf("2. Server (Host Multiplayer)\n");
+    printf("3. Client (Join Multiplayer)\n");
+    printf("Enter choice (1-3): ");
+    
+    int choice;
+    if (scanf("%d", &choice) == 1) {
+        if (choice == 1) mode = MODE_STANDALONE;
+        else if (choice == 2) mode = MODE_SERVER;
+        else if (choice == 3) mode = MODE_CLIENT;
+    }
+    // This prevents the "Enter Server IP" step from being skipped!
+    while (getchar() != '\n'); 
+
+    // Cleanup
     remove(PROCESS_LIST_FILE);
     remove(WATCHDOG_LOG_FILE);
     remove(SYSTEM_LOG_FILE);
 
-    printf("[Main] Starting system...\n");
-
-    // 4. REGISTRATION New for Assignment 2
+    printf("[Main] Starting system in mode: %d...\n", mode);
     register_process("Main_Manager");
-    log_message(SYSTEM_LOG_FILE, "Main", "System starting up...");
+    log_message(SYSTEM_LOG_FILE, "Main", "System starting in mode %d...", mode);
 
-    // 5. Initialize Pipes (Create the resources)
-    if (pipe(pipe_ui_to_server) == -1) perror("pipe");
-    // (Note: In a full implementation, initialize ALL pipes here)
- 
-    // IMPORTANT: Make pipes Non-Blocking.
-    // This prevents the system from freezing if one pipe is empty.
-    fcntl(pipe_ui_to_server[0], F_SETFL, O_NONBLOCK);
-    fcntl(pipe_dyn_to_server[0], F_SETFL, O_NONBLOCK);
-    fcntl(pipe_obs_to_server[0], F_SETFL, O_NONBLOCK);
-    fcntl(pipe_tar_to_server[0], F_SETFL, O_NONBLOCK);
+    // STEP 2: CREATE PIPES  
+    create_named_pipes();
 
-    printf("[Main] Pipes created.\n");
+    // LAUNCH PROCESSES 
+    
+    // 1. Blackboard Server
+    if (fork() == 0) { 
+        signal(SIGINT, SIG_DFL); 
+        run_blackboard(mode); 
+        exit(0); 
+    } 
 
+    // 2. Dynamics
+    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_dynamics(); exit(0); }
 
-    // 6. Launch Background Processes 
-    // fork() creates a copy of the program.
-    //  Reset signal handler to Default (SIG_DFL) for children 
-    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_blackboard(); exit(0); } // Server
-    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_dynamics(); exit(0); }   // Physics
-    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_obstacles(); exit(0); }  // Walls
-    if (fork() == 0) { signal(SIGINT, SIG_DFL); run_targets(); exit(0); }    // Goals
+    // 3. Generators & Watchdog (Only Standalone)
+    if (mode == MODE_STANDALONE) {
+        if (fork() == 0) { signal(SIGINT, SIG_DFL); run_obstacles(); exit(0); }
+        if (fork() == 0) { signal(SIGINT, SIG_DFL); run_targets(); exit(0); }
+        printf("[Main] Launching Watchdog...\n");
+        spawn_terminal("./watchdog");
+    } else {
+        printf("[Main] Multiplayer Mode: Generators and Watchdog DISABLED.\n");
+    }
 
-    // 7. Spawn External Windows (The Display & Input)
-    // These open in new windows on desktop.
+    // 4. UI WINDOWS
     printf("[Main] Launching Map Window...\n");
     spawn_terminal("./map"); 
     
     printf("[Main] Launching Input Window...\n");
     spawn_terminal("./input");
 
-    // 8. LAUNCH WATCHDOG (New for Assignment 2) 
-    printf("[Main] Launching Watchdog...\n");
-    spawn_terminal("./watchdog");
-
     printf("[Main] System Running. Press Ctrl+C to stop.\n");
 
-    // 9. Keep Parent Alive
-    // If main() exits, the OS might kill all child processes.
     while (1) {
         sleep(10);
     }

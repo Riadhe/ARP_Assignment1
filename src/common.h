@@ -14,6 +14,16 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdarg.h>
+
+// ASSIGNMENT 3  : Operation Modes 
+#define MODE_STANDALONE 0
+#define MODE_SERVER     1
+#define MODE_CLIENT     2
+
+//ASSIGNMENT 3 :  Network Settings
+#define SERVER_PORT 5001
+#define MSG_BUFFER_SIZE 256
+
 // 2. PIPES 
 #define PIPE_DIR "/tmp/"
 
@@ -78,7 +88,7 @@ typedef enum {
     MSG_STOP,           // "Emergency Stop / Quit Game"
 } MessageType;
 
-// 4. DATA STRUCTURES (The Objects)
+// 4. DATA STRUCTURES 
 
 // 2D Vector for Position, Velocity, Force
 typedef struct { 
@@ -140,4 +150,8 @@ void log_message(const char *filename, const char *process_name, const char *fmt
  * Saves the process PID to process_list.txt so the Watchdog can find it
  */
 void register_process(const char *process_name);
+
+// ASSIGNMENT 3 : Network Function Prototypes
+void run_blackboard(int mode);
+
 #endif
