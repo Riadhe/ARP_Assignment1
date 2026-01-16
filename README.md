@@ -75,15 +75,11 @@ To prevent race conditions when multiple processes write to logs simultaneously,
 ### A. Operation Modes
 The game behavior changes significantly depending on the mode selected at startup. This design ensures the same codebase can handle single-player logic and distributed networking logic.
 
-* Standalone (Legacy Mode):
+      * Standalone (Legacy Mode):This mode runs the full simulation locally for single-player practice. Random targets and obstacles are generated automatically to provide a challenge, and the Watchdog process remains active to monitor system reliability.
 
-This mode runs the full simulation locally for single-player practice. Random targets and obstacles are generated automatically to provide a challenge, and the Watchdog process remains active to monitor system reliability.
+      * Server (The Host): Acts as the host for a multiplayer session by opening Port 8080. It disables local obstacle generators and the Watchdog to prevent synchronization issues, relying instead on the connected client to serve as the dynamic obstacle.
 
-* Server (The Host):
-Acts as the host for a multiplayer session by opening Port 8080. It disables local obstacle generators and the Watchdog to prevent synchronization issues, relying instead on the connected client to serve as the dynamic obstacle.
-
-* Client (The Guest):
-Connects to the Server's IP address to join an existing session. It automatically synchronizes its map configuration with the host and disables local generators and monitoring, focusing entirely on real-time interaction with the remote player.
+      * Client (The Guest):Connects to the Server's IP address to join an existing session. It automatically synchronizes its map configuration with the host and disables local generators and monitoring, focusing entirely on real-time interaction with the remote player.
 
 ### B.Network Protocol :
 This defines the "Language" the two computers speak. It is strictly synchronous (Step-by-Step) to prevent data corruption.
