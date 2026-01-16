@@ -1,9 +1,9 @@
 #  Drone Simulator  
-### *Advanced and Robot Programming – Assignment 2*
+### *Advanced and Robot Programming – Assignment 3*
 
 **Student:** Bahri Riadh  
 **ID:** 8335614  
-
+**Tested with :** Hani Bouhraoui 
 ---
 
 ## 1. Project Overview
