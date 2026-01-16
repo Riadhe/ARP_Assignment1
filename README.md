@@ -74,7 +74,7 @@ To prevent race conditions when multiple processes write to logs simultaneously,
   - system.log: for the critical errors and state changes.
 ---
 ## 4. Assignment 3 Features (Networking): 
----
+
 ### A. Operation Modes
 The game behavior changes significantly depending on the mode selected at startup. This design ensures the same codebase can handle single-player logic and distributed networking logic.
 
@@ -299,7 +299,7 @@ Network Interface Layer (Assignment 3).
   6. Release Lock and Sleep.
 ---
 ## 6. Installation and Running : 
----
+
 ### Prerequisites
 - Linux environment  
 - GCC & Make  
@@ -364,7 +364,7 @@ Edit config/params.txt:
 * F_STEP : Force added per key press.
 
 * T_WATCHDOG: (Optional) Monitoring interval.
-* ---
+  
 ## 📂 6. File Structure :
 
 ```
