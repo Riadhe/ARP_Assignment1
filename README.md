@@ -365,7 +365,7 @@ Edit config/params.txt:
 
 * T_WATCHDOG: (Optional) Monitoring interval.
   
-## 📂 6. File Structure :
+## 📂 7. File Structure :
 
 ```
 project_root/
