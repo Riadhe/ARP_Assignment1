@@ -45,7 +45,7 @@ The system utilizes a centralized architecture where the Blackboard acts as the 
 * Remote IPC: TCP Sockets for Server-Client communication (Assignment 3).
 
 * Non-Blocking I/O: The server uses O_NONBLOCK to ensure the simulation runs smoothly without hanging on empty pipes.
-## 3. Assignment 2 Features (New)
+## 3. Assignment 2 Features :
 
 The second phase of the project introduces system monitoring and safety mechanisms.
 
