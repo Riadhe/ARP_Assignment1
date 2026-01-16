@@ -1,5 +1,5 @@
 #  Drone Simulator  
-### *Advanced and Robot Programming – Assignment 3*
+### *Advanced Robot Programming – Assignment 3*
 
 **Student:** Bahri Riadh  
 **ID:** 8335614  
@@ -10,6 +10,14 @@
 
 This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
 In the final phase (Assignment 3), the system extends to support **Multiplayer Networking** via TCP Sockets.This allows two instances of the simulator (Server and Client) to connect over a network, synchronizing drone positions in real-time.
+
+## 2.Evolution of the Project:
+
+**Assignment 1:** Implemented the core simulation, physics engine, collision detection, and UI.
+
+**Assignment 2:** Added system reliability via a Watchdog process and safe File Logging.
+
+**Assignment 3 :** Added distributed capabilities via TCP Sockets, enabling Multiplayer functionality.
 
 **Simulation Demo:**
 The simulation runs across three synchronized terminal windows:
@@ -27,7 +35,7 @@ The simulation runs across three synchronized terminal windows:
 * Multiplayer Mode:  Navigate freely while avoiding the other player (rendered as an obstacle).
 
 ---
-## 2. System Architecture
+## 3. System Architecture
 The system utilizes a centralized architecture where the Blackboard acts as the server. All other processes (Drone Dynamics, UI, Obstacles, Targets) act as clients that communicate exclusively through the Blackboard.(Note: The Watchdog operates as a separate supervisor parallel to this topology).
 ![Architecture](ArchitectureDiagram.png)
 
@@ -76,14 +84,15 @@ Acts as the host for a multiplayer session by opening Port 8080. It disables loc
 
 * Client (The Guest):
 Connects to the Server's IP address to join an existing session. It automatically synchronizes its map configuration with the host and disables local generators and monitoring, focusing entirely on real-time interaction with the remote player.
+
 ### B.Network Protocol :
 This defines the "Language" the two computers speak. It is strictly synchronous (Step-by-Step) to prevent data corruption.
 
 * Handshake (The Setup):
 
-ok → ook: Confirms connection stability. "Are you there?" -> "Yes, I am here."
+ok $\to$ ook: Confirms connection stability. "Are you there?" -> "Yes, I am here."
 
-size → sok: The Server dictates the Map Width/Height. The Client receives these dimensions, resizes its window if necessary, and confirms receipt.
+size $\to$ sok: The Server dictates the Map Width/Height. The Client receives these dimensions, resizes its window if necessary, and confirms receipt.
 
 * Exchange (The Loop):
 
@@ -92,8 +101,11 @@ drone → dok: "Here are my coordinates." -> "Data received (OK)."
 obst → pok: "Where are you?" -> "Here are my coordinates (as an obstacle)." -> "Data received (OK)."
 
 * Note: To the local player, the remote player is treated mathematically as an Obstacle (O), triggering the repulsion force logic.
+### C.Technical Implementation :
+* Packet Handling: Implemented a "Smart Reader" (byte-by-byte) to resolve TCP packet merging issues.
 
-## 5. Components and Algorithms
+* Rate Limiting: Decouples network I/O (10Hz) from physics calculation (100Hz) to prevent input lag.
+## 5. Components and Algorithms : 
 
 This section details the logic implemented in each source file.
 
@@ -169,7 +181,7 @@ Velocity += Acceleration * T
 Position += Velocity * T
 
 ---
-#### **Algorithm 2 — ATtraction field**
+#### **Algorithm 2 — Attraction field**
 
 Algorithm Attraction_Field:
 
@@ -285,7 +297,7 @@ socket(), bind(), accept(), connect(), send(), recv()
       1. Connection: Handles TCP connection setup for both Server (bind/listen) and Client (connect).
 
       2. Handshake: Executes the strict ok/size verification sequence.
-      3. Parsing: Uses robust sscanf logic to handle variable delimiters (commas/spaces) for interoperability.
+      3. Parsing: Uses sscanf logic to handle variable delimiters (commas/spaces) for interoperability.
 
       4. Packet Handling: Implements a smart reader that reads 1 byte at a time to prevent TCP stream fragmentation errors (packet merging).
 
