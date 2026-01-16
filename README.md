@@ -45,7 +45,7 @@ The system utilizes a centralized architecture where the Blackboard acts as the 
 * Remote IPC: TCP Sockets for Server-Client communication (Assignment 3).
 
 * Non-Blocking I/O: The server uses O_NONBLOCK to ensure the simulation runs smoothly without hanging on empty pipes.
-## 3. Assignment 2 Features :
+## 3. Assignment 2 Features (New)
 
 The second phase of the project introduces system monitoring and safety mechanisms.
 
@@ -170,42 +170,42 @@ Loop (500 Hz):
 
 1. Calculate Repulsion Force:
 If Distance < 10m:
-F_rep += (1/Distance - 1/Rho) * (1/Distance²)
+`F_rep += (1/Distance - 1/Rho) * (1/Distance²)`
 
 2. Calculate Total Force:
-F_total = Command_Force + F_rep
+`F_total = Command_Force + F_rep`
 
 3. Euler Integration:
-Acceleration = (F_total - K * Velocity) / Mass
-Velocity += Acceleration * T
-Position += Velocity * T
+`Acceleration = (F_total - K * Velocity) / Mass`
+`Velocity += Acceleration * T`
+`Position += Velocity * T`
 
 ---
 #### **Algorithm 2 — Attraction field**
 
 Algorithm Attraction_Field:
 
-1. Initialize attraction force vector F_att = (0, 0)
+1. Initialize attraction force vector `F_att = (0, 0)`
 
 2. If the next required target exists AND is active:
       a. Compute displacement:
-            dx = target.x − drone.x
-            dy = target.y − drone.y
+            `dx = target.x − drone.x`
+            `dy = target.y − drone.y`
 
       b. Compute distance to the target:
-            dist = sqrt(dx² + dy²)
+           ` dist = sqrt(dx² + dy²)`
 
-      c. If the drone is inside the attraction radius (dist < ATTRACTION_RHO):
+      c. If the drone is inside the attraction radius `(dist < ATTRACTION_RHO)`:
             Apply attraction:
-            F_att.x = ATTRACTION_ETA * dx
-            F_att.y = ATTRACTION_ETA * dy
+            `F_att.x = ATTRACTION_ETA * dx`
+            `F_att.y = ATTRACTION_ETA * dy`
 
-3. Return the attraction force vector F_att
+3. Return the attraction force vector `F_att`
  
 ---
 #### **Algorithm 3 — Collision Detection**
-* If Distance(Drone, Target[i]) < 2.0m:
-* If Target[i].ID == Next_Required_ID:
+* If `Distance(Drone, Target[i]) < 2.0m`:
+* If `Target[i].ID == Next_Required_ID`:
  1. Mark Target as Collected
  2. Respawn Target
  3. Send Update to Server
@@ -218,7 +218,7 @@ Algorithm Attraction_Field:
 Controller and Telemetry Display.
 
 #### **Primitives**
-`getch()`, Ncurses
+`getch()`, `Ncurses`
 
 #### **Algorithm**
 * Loop (50 Hz):
@@ -249,7 +249,7 @@ Procedural Generation.
 * Loop:
 1. Sleep(Interval)
 2. Generate Random X, Y
-3. Send MSG_OBSTACLE or MSG_TARGET to Server
+3. Send `MSG_OBSTACLE` or `MSG_TARGET` to Server
 
 ---
 ### G. Watchdog Process(`src/watchdog.c`)
@@ -281,17 +281,17 @@ Shared Helper Functions for Safety.
       * OBSTACLE → Forward to Map and Dynamics
       * TARGET → Forward to Map and Dynamics
 * 
-      1. file_lock(): Wrapper for fcntl to handle F_SETLKW (Blocking Wait).
+      1. `file_lock()`: Wrapper for fcntl to handle F_SETLKW (Blocking Wait).
 
-      2. register_process(): Safe write of PID to the process list.
+      2. `register_process()`: Safe write of PID to the process list.
 
-      3. log_message(): Safe write (Open -> Lock -> Write -> Unlock -> Close) to log files.
+      3. `log_message()`: Safe write (Open -> Lock -> Write -> Unlock -> Close) to log files.
 ---
 ### G. Socket Manager(`src/socket_manager.c`)
 #### **Role**
 Network Interface Layer (Assignment 3).
 #### **Primitives**
-socket(), bind(), accept(), connect(), send(), recv()
+`socket()`, `bind()`, `accept()`, `connect()`, `send()`, `recv()`
 #### **Algorithm :**
 * 
       1. Connection: Handles TCP connection setup for both Server (bind/listen) and Client (connect).
