@@ -10,7 +10,7 @@
 
 This project implements a multi-process drone simulation system using **Ncurses** for visualization and **Named Pipes (FIFOs)** for inter-process communication. The architecture follows a **Star Topology** centered around a **Blackboard Server**.
 In the final phase (Assignment 3), the system extends to support **Multiplayer Networking** via TCP Sockets.This allows two instances of the simulator (Server and Client) to connect over a network, synchronizing drone positions in real-time.
-
+---
 ## 2.Evolution of the Project:
 
 **Assignment 1:** Implemented the core simulation, physics engine, collision detection, and UI.
@@ -30,6 +30,7 @@ The simulation runs across three synchronized terminal windows:
 
 ![Simulation Screenshot](SimulationDemo.png)
 ![Simulation Screenshot](WatchdogWindow.png)
+
 **Goal:** 
 * Standalone Mode:  Navigate a drone (Blue +) to collect sequential targets (Green 1–9) while avoiding repulsive obstacles (Yellow o), all while the Watchdog ensures system stability.
 * Multiplayer Mode:  Navigate freely while avoiding the other player (rendered as an obstacle).
@@ -45,6 +46,7 @@ The system utilizes a centralized architecture where the Blackboard acts as the 
 * Remote IPC: TCP Sockets for Server-Client communication (Assignment 3).
 
 * Non-Blocking I/O: The server uses O_NONBLOCK to ensure the simulation runs smoothly without hanging on empty pipes.
+* ---
 ## 3. Assignment 2 Features (New)
 
 The second phase of the project introduces system monitoring and safety mechanisms.
@@ -72,7 +74,7 @@ To prevent race conditions when multiple processes write to logs simultaneously,
   - system.log: for the critical errors and state changes.
 ---
 ## 4. Assignment 3 Features (Networking): 
----
+
 ### A. Operation Modes
 The game behavior changes significantly depending on the mode selected at startup. This design ensures the same codebase can handle single-player logic and distributed networking logic.
 
@@ -81,7 +83,7 @@ The game behavior changes significantly depending on the mode selected at startu
   * **Server (The Host)**: Acts as the host for a multiplayer session by opening Port 8080. It disables local obstacle generators and the Watchdog to prevent synchronization issues, relying instead on the connected client to serve as the dynamic obstacle.
 
   * **Client (The Guest)**: Connects to the Server's IP address to join an existing session. It automatically synchronizes its map configuration with the host and disables local generators and monitoring, focusing entirely on real-time interaction with the remote player.
----
+
 ### B.Network Protocol :
 This defines the "Language" the two computers speak. It is strictly synchronous (Step-by-Step) to prevent data corruption.
 
@@ -96,9 +98,9 @@ This defines the "Language" the two computers speak. It is strictly synchronous 
   - drone → dok: "Here are my coordinates." -> "Data received (OK)."
 
   - obst → pok: "Where are you?" -> "Here are my coordinates (as an obstacle)." -> "Data received (OK)."
----
+
 * Note: To the local player, the remote player is treated mathematically as an Obstacle (O), triggering the repulsion force logic.
-* ---
+
 ### C.Technical Implementation :
 * Packet Handling: Implemented a "Smart Reader" (byte-by-byte) to resolve TCP packet merging issues.
 
@@ -268,7 +270,6 @@ System Health Monitor.
 
       6. Release Lock and Sleep.
 ---
----
 ### H. Utilities (`src/utilities.c`):
 #### **Role**
 Shared Helper Functions for Safety.
@@ -279,7 +280,7 @@ Shared Helper Functions for Safety.
       * FORCE → Forward to Dynamics
       * OBSTACLE → Forward to Map and Dynamics
       * TARGET → Forward to Map and Dynamics
-* 
+        
       1. `file_lock()`: Wrapper for fcntl to handle F_SETLKW (Blocking Wait).
 
       2. `register_process()`: Safe write of PID to the process list.
@@ -292,28 +293,16 @@ Network Interface Layer (Assignment 3).
 #### **Primitives**
 `socket()`, `bind()`, `accept()`, `connect()`, `send()`, `recv()`
 #### **Algorithm :**
-* 
-      1. Connection: Handles TCP connection setup for both Server (bind/listen) and Client (connect).
 
-      2. Handshake: Executes the strict ok/size verification sequence.
-      3. Parsing: Uses sscanf logic to handle variable delimiters (commas/spaces) for interoperability.
-
-      4. Packet Handling: Implements a smart reader that reads 1 byte at a time to prevent TCP stream fragmentation errors (packet merging).
-
-      5. Log result to watchdog.log.
-
-      6. Release Lock and Sleep.
+  1. Connection: Handles TCP connection setup for both Server (bind/listen) and Client (connect).
+  2. Handshake: Executes the strict ok/size verification sequence.
+  3. Parsing: Uses sscanf logic to handle variable delimiters (commas/spaces) for interoperability.
+  4. Packet Handling: Implements a smart reader that reads 1 byte at a time to prevent TCP stream fragmentation errors (packet merging).
+  5. Log result to watchdog.log.
+  6. Release Lock and Sleep.
 ---
-## 5. Installation and Running
-Update the internal state struct.
-4. Route Data:
-      * Switch(Message Type):
-      * DRONE_STATE → Broadcast to Map and UI_Input
-      * FORCE → Forward to Dynamics
-      * OBSTACLE → Forward to Map and Dynamics
-      * TARGET → Forward to Map and Dynamics
+## 6. Installation and Running : 
 ---
-
 ### Prerequisites
 - Linux environment  
 - GCC & Make  
